@@ -29,13 +29,18 @@ prophet==1.1.4
 tensorflow==2.13.0
 statsmodels==0.14.0
 
+# Jupyter and notebook dependencies
+jupyter==1.0.0
+jupyter_server==2.7.2
+notebook==7.0.4
+nbclassic==1.0.0
+
 # Utilities
 tqdm==4.65.0
 plotly==5.15.0
 matplotlib==3.7.2
 seaborn==0.12.2
 ipykernel==6.24.0
-notebook==6.5.4
 
 # Testing
 pytest==7.4.0

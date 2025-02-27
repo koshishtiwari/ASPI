@@ -12,6 +12,9 @@ from typing import Dict, List, Optional, Union, Tuple
 from sklearn.preprocessing import StandardScaler
 
 from .utils import load_config
+from .utils.pattern_utils import detect_doji, detect_hammer, detect_engulfing, detect_morningstar, apply_pattern_detection
+from .utils.date_utils.py import safe_convert_to_float, is_date, clean_dataframe, parse_date_column
+
 
 logger = logging.getLogger(__name__)
 
@@ -412,7 +415,18 @@ class FeatureEngineering:
         return df
     
     def _generate_pattern_features(self, df: pd.DataFrame, patterns: List[str]) -> pd.DataFrame:
-        """Generate pattern recognition features."""
+        """Generate pattern recognition features.
+        
+        Args:
+            df: DataFrame with OHLC data
+            patterns: List of patterns to detect
+            
+        Returns:
+            DataFrame with pattern features added
+        """
+        # Import the custom pattern detection module
+        from .pattern_utils import detect_doji, detect_hammer, detect_engulfing, detect_morningstar
+        
         # Get OHLC data
         open_price = df['Open']
         high = df['High']
@@ -422,30 +436,21 @@ class FeatureEngineering:
         # Generate pattern features based on configuration
         for pattern in patterns:
             if pattern == 'hammer':
-                # Hammer candlestick pattern (using pandas_ta)
-                hammer = ta.cdl_pattern(open_price, high, low, close, name="hammer")
-                if hammer is not None:
-                    df = df.join(hammer)
+                df['hammer'] = detect_hammer(df)
             
             elif pattern == 'engulfing':
-                # Engulfing pattern (using pandas_ta)
-                engulfing = ta.cdl_pattern(open_price, high, low, close, name="engulfing")
-                if engulfing is not None:
-                    df = df.join(engulfing)
+                engulfing = detect_engulfing(df)
+                df['bullish_engulfing'] = engulfing['bullish_engulfing']
+                df['bearish_engulfing'] = engulfing['bearish_engulfing']
+                
+                # Combined engulfing signal (1 for bullish, -1 for bearish, 0 for none)
+                df['engulfing_signal'] = df['bullish_engulfing'] - df['bearish_engulfing']
             
             elif pattern == 'doji':
-                # Doji pattern (using pandas_ta)
-                doji = ta.cdl_pattern(open_price, high, low, close, name="doji")
-                if doji is not None:
-                    df = df.join(doji)
+                df['doji'] = detect_doji(df)
             
             elif pattern == 'morningstar':
-                # Morning Star pattern (using pandas_ta)
-                morningstar = ta.cdl_pattern(open_price, high, low, close, name="morningstar")
-                if morningstar is not None:
-                    df = df.join(morningstar)
-            
-            # Additional patterns can be added here
+                df['morning_star'] = detect_morningstar(df)
         
         return df
     
@@ -701,12 +706,14 @@ class FeatureEngineering:
         """Generate target labels for ML models.
         
         Args:
-            market_data: DataFrame with OHLCV data
+            market_data: DataFrame with OHLC data
             horizon: Time horizon ('short_term', 'medium_term', 'long_term')
             
         Returns:
             DataFrame with binary target labels
         """
+        from .date_utils import safe_convert_to_float, clean_dataframe
+        
         if market_data.empty:
             logger.warning("Empty market data provided, returning empty DataFrame")
             return pd.DataFrame()
@@ -715,8 +722,8 @@ class FeatureEngineering:
         horizons_config = self.config['models']['time_horizons']
         horizon_days = horizons_config[horizon]['days']
         
-        # Make a copy of the market data
-        df = market_data.copy()
+        # Make a copy of the market data and ensure numeric types
+        df = clean_dataframe(market_data.copy())
         
         # Calculate future returns
         df['future_return'] = df['Close'].shift(-horizon_days) / df['Close'] - 1
@@ -727,9 +734,9 @@ class FeatureEngineering:
         # Optionally create multi-class targets
         # 0: Strong Negative (< -5%), 1: Negative, 2: Neutral, 3: Positive, 4: Strong Positive (> 5%)
         df['target_multiclass'] = np.where(df['future_return'] < -0.05, 0,
-                                     np.where(df['future_return'] < 0, 1,
-                                         np.where(df['future_return'] < 0.03, 2,
-                                             np.where(df['future_return'] < 0.05, 3, 4))))
+                                    np.where(df['future_return'] < 0, 1,
+                                        np.where(df['future_return'] < 0.03, 2,
+                                            np.where(df['future_return'] < 0.05, 3, 4))))
         
         # Remove NaN targets (will be at the end due to future returns)
         df = df.dropna(subset=['target'])

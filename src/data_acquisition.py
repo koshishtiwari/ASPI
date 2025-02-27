@@ -19,6 +19,8 @@ from typing import Dict, List, Optional, Union, Tuple
 from concurrent.futures import ThreadPoolExecutor
 
 from .utils import create_directory, load_config
+from .utils.yfinance_utils import download_with_retry
+from .utils.date_utils import safe_convert_to_float, clean_dataframe
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +132,8 @@ class DataAcquisition:
         Returns:
             DataFrame with market data
         """
+        from .yfinance_utils import download_with_retry
+        
         cache_file = self._get_cache_file_path(symbol, 'market', interval, period)
         
         # Check if we have valid cached data
@@ -151,14 +155,10 @@ class DataAcquisition:
         # Try yfinance first if enabled
         if self.config['data_acquisition']['apis']['yfinance']['enabled']:
             try:
-                # Use ThreadPoolExecutor for yfinance which doesn't support asyncio natively
-                with ThreadPoolExecutor() as executor:
-                    data = await asyncio.get_event_loop().run_in_executor(
-                        executor, 
-                        lambda: yf.download(symbol, period=period, interval=interval, progress=False)
-                    )
+                # Use the improved download with retry function
+                data = download_with_retry(symbol, period=period, interval=interval)
                 
-                if not data.empty:
+                if data is not None and not data.empty:
                     # Save to CSV cache
                     data.to_csv(cache_file)
                     return data
