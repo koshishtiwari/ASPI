@@ -1,0 +1,1 @@
+"""Example scripts for Advanced Stock Potential Identifier."""

@@ -1,0 +1,45 @@
+version: '3'
+
+services:
+  stock-identifier:
+    build: .
+    container_name: stock-potential-identifier
+    volumes:
+      # Mount these directories for persistence
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./reports:/app/reports
+      - ./logs:/app/logs
+      - ./config:/app/config
+    environment:
+      - DATA_DIR=/app/data
+      - MODELS_DIR=/app/models
+      - REPORTS_DIR=/app/reports
+      - CONFIG_PATH=/app/config/config.yaml
+      # Add your API keys here (or use .env file)
+      - ALPHA_VANTAGE_API_KEY=${ALPHA_VANTAGE_API_KEY}
+      - FMP_API_KEY=${FMP_API_KEY}
+    restart: unless-stopped
+
+  # Jupyter service for interactive analysis
+  jupyter:
+    build: .
+    container_name: stock-identifier-jupyter
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./reports:/app/reports
+      - ./logs:/app/logs
+      - ./config:/app/config
+      - ./notebooks:/app/notebooks
+      - ./src:/app/src
+    ports:
+      - "8888:8888"
+    environment:
+      - DATA_DIR=/app/data
+      - MODELS_DIR=/app/models
+      - REPORTS_DIR=/app/reports
+      - CONFIG_PATH=/app/config/config.yaml
+      - ALPHA_VANTAGE_API_KEY=${ALPHA_VANTAGE_API_KEY}
+      - FMP_API_KEY=${FMP_API_KEY}
+    command: jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password=''

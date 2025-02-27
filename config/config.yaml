@@ -1,0 +1,235 @@
+# Stock Potential Identifier System Configuration
+
+# System paths
+paths:
+  data_dir: data
+  models_dir: models
+  reports_dir: reports
+
+# Stock universe configuration
+stock_universe:
+  # Default stock universe (S&P 500 sample)
+  default_stocks:
+    - AAPL
+    - MSFT
+    - GOOGL
+    - AMZN
+    - META
+    - TSLA
+    - NVDA
+    - JPM
+    - V
+    - JNJ
+    - WMT
+    - PG
+    - XOM
+    - BAC
+    - CSCO
+  # Path to custom universe file (CSV with symbol column)
+  custom_universe_path: null
+  # Maximum number of stocks to analyze
+  max_stocks: 100
+  
+# Data acquisition settings
+data_acquisition:
+  # Cache settings
+  cache_dir: data/market_data
+  cache_expiry_days: 1
+  # Default timeframes for data
+  default_timeframes:
+    historical: 5y  # For model training
+    recent: 2y      # For feature generation
+  # API settings
+  apis:
+    yfinance:
+      enabled: true
+      base_url: null  # Uses default
+    alpha_vantage:
+      enabled: true
+      base_url: https://www.alphavantage.co/query
+      api_key_env: ALPHA_VANTAGE_API_KEY
+      calls_per_minute: 5
+      calls_per_day: 500
+    financial_modeling_prep:
+      enabled: true
+      base_url: https://financialmodelingprep.com/api
+      api_key_env: FMP_API_KEY
+      calls_per_minute: 10
+      calls_per_day: 250
+    sec_edgar:
+      enabled: true
+      user_agent: "StockPotentialIdentifier 1.0"
+
+# Feature engineering settings
+feature_engineering:
+  # Technical indicator settings
+  technical:
+    momentum_indicators:
+      - rsi
+      - macd
+      - roc
+    volatility_indicators:
+      - bbands
+      - atr
+      - historical_volatility
+    volume_indicators:
+      - obv
+      - cmf
+      - vwap
+    trend_indicators:
+      - sma
+      - ema
+      - adx
+    pattern_recognition:
+      enabled: true
+      patterns:
+        - hammer
+        - engulfing
+        - doji
+        - morningstar
+  # Fundamental features
+  fundamental:
+    enabled: true
+    metrics:
+      - pe_ratio
+      - ps_ratio
+      - pb_ratio
+      - debt_to_equity
+      - roe
+      - roa
+      - operating_margin
+      - revenue_growth
+  # Alternative data
+  alternative:
+    news_sentiment:
+      enabled: false  # Needs API key
+    social_sentiment:
+      enabled: false  # Needs API key
+    insider_activity:
+      enabled: true
+      source: sec_edgar
+
+# Model settings
+models:
+  # Time horizons
+  time_horizons:
+    short_term:
+      days: 5
+      training_frequency_days: 7
+    medium_term:
+      days: 21
+      training_frequency_days: 14
+    long_term:
+      days: 63
+      training_frequency_days: 30
+  
+  # Model configurations
+  configurations:
+    time_series:
+      enabled: true
+      types:
+        - arima
+        - prophet
+    machine_learning:
+      enabled: true
+      types:
+        - xgboost
+        - lightgbm
+        - random_forest
+    deep_learning:
+      enabled: true
+      types:
+        - lstm
+  
+  # Hyperparameters
+  hyperparameters:
+    xgboost:
+      short_term:
+        n_estimators: 200
+        learning_rate: 0.05
+        max_depth: 6
+      medium_term:
+        n_estimators: 300
+        learning_rate: 0.03
+        max_depth: 8
+      long_term:
+        n_estimators: 500
+        learning_rate: 0.01
+        max_depth: 10
+    lightgbm:
+      short_term:
+        n_estimators: 200
+        learning_rate: 0.05
+        max_depth: 6
+      medium_term:
+        n_estimators: 300
+        learning_rate: 0.03
+        max_depth: 8
+      long_term:
+        n_estimators: 500
+        learning_rate: 0.01
+        max_depth: 10
+    lstm:
+      short_term:
+        units: 50
+        layers: 2
+        epochs: 100
+      medium_term:
+        units: 100
+        layers: 2
+        epochs: 150
+      long_term:
+        units: 150
+        layers: 3
+        epochs: 200
+
+# Fusion layer settings
+fusion:
+  # Model weighting
+  weighting:
+    lookback_window: 30
+    min_history_days: 7
+  # Market regime detection
+  regime_detection:
+    enabled: true
+    volatility_threshold: 0.02
+    trend_threshold: 0.25
+
+# Signal generator settings
+signals:
+  # Risk parameters
+  risk:
+    risk_free_rate: 0.03
+    stop_loss_volatility_multiplier: 2.5
+  # Signal quality thresholds
+  quality_thresholds:
+    min_probability: 0.6
+    min_risk_reward: 2.0
+    min_sharpe: 0.5
+
+# Decision engine settings
+decisions:
+  # Portfolio constraints
+  portfolio:
+    max_positions: 10
+    max_correlation: 0.6
+  # Opportunity ranking
+  ranking:
+    probability_weight: 0.3
+    risk_reward_weight: 0.3
+    sharpe_weight: 0.4
+
+# Execution settings
+execution:
+  check_frequency_minutes: 60
+  report_output_formats:
+    - json
+    - csv
+    - html
+
+# Logging settings
+logging:
+  level: INFO
+  log_to_file: true
+  log_file: logs/stock_identifier.log
+  rotation: daily
